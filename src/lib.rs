@@ -227,8 +227,11 @@ impl Pinger {
             let mut receiver = rx.lock().unwrap();
             let mut iter = icmp_packet_iter(&mut receiver);
             loop {
-                match iter.next() {
-                    Ok((packet, addr)) => match IcmpEchoReplyPacket::new(packet.packet()) {
+                if *stop.lock().unwrap() {
+                    break;
+                }
+                match iter.next_with_timeout(Duration::from_secs(1)) {
+                    Ok(Some((packet, addr))) => match IcmpEchoReplyPacket::new(packet.packet()) {
                         Some(echo_reply) => {
                             if packet.get_icmp_type() == icmp::IcmpTypes::EchoReply {
                                 let start_time = timer.read().unwrap();
@@ -257,6 +260,7 @@ impl Pinger {
                         }
                         None => {}
                     },
+                    Ok(None) => {}
                     Err(e) => {
                         error!("An error occurred while reading: {}", e);
                     }
@@ -274,8 +278,11 @@ impl Pinger {
             let mut receiver = rxv6.lock().unwrap();
             let mut iter = icmpv6_packet_iter(&mut receiver);
             loop {
-                match iter.next() {
-                    Ok((packet, addr)) => match Icmpv6EchoReplyPacket::new(packet.packet()) {
+                if *stopv6.lock().unwrap() {
+                    break;
+                }
+                match iter.next_with_timeout(Duration::from_secs(1)) {
+                    Ok(Some((packet, addr))) => match Icmpv6EchoReplyPacket::new(packet.packet()) {
                         Some(echo_reply) => {
                             if packet.get_icmpv6_type() == icmpv6::Icmpv6Types::EchoReply {
                                 let start_time = timerv6.read().unwrap();
@@ -304,6 +311,7 @@ impl Pinger {
                         }
                         None => {}
                     },
+                    Ok(None) => {}
                     Err(e) => {
                         error!("An error occurred while reading: {}", e);
                     }
